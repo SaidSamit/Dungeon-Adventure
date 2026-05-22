@@ -1,136 +1,168 @@
 using UnityEngine;
+using System.Collections.Generic;
 
-// Gestionar los enemigos, la interfaz local y los eventos de la sala
 public class RoomManager : MonoBehaviour
 {
     [Header("Configuración de Oleada")]
+    // Asignar el prefab del enemigo a generar en esta sala específica
     public GameObject enemyPrefab;
-    public int totalEnemies = 10;
-    
-    [Header("Límites de Sala")]
-    public BoxCollider2D roomBounds; 
+    // Definir la cantidad total de enemigos para la oleada local
+    public int totalEnemies = 1;
+
+    [Header("Límites de Sala y Puerta")]
+    // Asignar el colisionador que define el área de aparición
+    public BoxCollider2D roomBounds;
+    // Definir la distancia mínima para evitar apariciones sobre el jugador
     public float minDistanceFromPlayer = 4f;
+    // Asignar la puerta local de esta sala (requiere el componente DungeonDoor)
+    public DungeonDoor exitDoor;
 
-    [Header("Interfaz de la Sala")]
-    public GameObject upgradePanel; 
+    [Header("Interfaz de la Sala (BÚSQUEDA AUTOMÁTICA)")]
+    // La variable se completará automáticamente al iniciar el juego
+    public UpgradePanelUI upgradeUIController;
 
-    private Transform player;
-    private bool roomCleared = false;
+    // --- Estado Local de la Sala ---
+    private List<GameObject> activeEnemies = new List<GameObject>();
+    private bool playerEntered = false;
+    private Transform playerTransform;
 
-    void Start()
+    private void Start()
     {
-        // Obtener la referencia del jugador
-        player = GameObject.FindGameObjectWithTag("Player")?.transform;
-        if (roomBounds == null) return;
-        SpawnWave();
-    }
-
-    void Update()
-    {
-        // Monitorear la limpieza de la sala en tiempo real
-        if (!roomCleared)
+        // Buscar automáticamente el componente de interfaz en la escena si la casilla se encuentra vacía
+        if (upgradeUIController == null)
         {
-            CheckEnemiesCleared();
+            upgradeUIController = Object.FindAnyObjectByType<UpgradePanelUI>(FindObjectsInactive.Include);
+        }
+
+        // Vincular esta sala al teletransportador local para gestionar el reinicio controlado
+        if (exitDoor != null)
+        {
+            RandomTeleporter teleporter = exitDoor.GetComponentInChildren<RandomTeleporter>(true);
+            if (teleporter != null)
+            {
+                teleporter.currentRoom = this;
+            }
         }
     }
 
-    void SpawnWave()
+    private void OnTriggerEnter2D(Collider2D collision)
     {
-        // Instanciar entidades enemigas en posiciones calculadas
+        // Detectar el ingreso del jugador al área de la sala por primera vez
+        if (collision.CompareTag("Player") && !playerEntered)
+        {
+            playerEntered = true;
+            playerTransform = collision.transform;
+            
+            // Iniciar la generación de la oleada de monstruos
+            SpawnEnemies();
+        }
+    }
+
+    public void ResetRoomState()
+    {
+        // Restablecer el estado de control de ingreso del personaje
+        playerEntered = false;
+
+        // Limpiar por completo el registro de la lista de enemigos activos
+        activeEnemies.Clear();
+
+        // Ordenar a la puerta local restablecer sus componentes físicos y visuales
+        if (exitDoor != null)
+        {
+            exitDoor.CloseDoor();
+        }
+    }
+
+    private void SpawnEnemies()
+    {
+        // Ejecutar el ciclo de instanciación según el total definido
         for (int i = 0; i < totalEnemies; i++)
         {
-            Vector3 spawnPos = GetValidEdgePosition();
-            Instantiate(enemyPrefab, spawnPos, Quaternion.identity);
+            Vector2 spawnPosition = GetRandomSpawnPosition();
+            GameObject enemy = Instantiate(enemyPrefab, spawnPosition, Quaternion.identity);
+            
+            // Registrar el enemigo en la lista de entidades activas de esta sala específica
+            activeEnemies.Add(enemy);
         }
     }
 
-    Vector3 GetValidEdgePosition()
+    private Vector2 GetRandomSpawnPosition()
     {
-        Bounds b = roomBounds.bounds;
-        Vector3 randomPos = Vector3.zero;
-        bool valid = false;
-        int safetyNet = 0;
+        Vector2 position = Vector2.zero;
+        bool validPosition = false;
+        int attempts = 0;
 
-        // Calcular punto de aparición validando colisiones
-        while (!valid && safetyNet < 50)
+        // Buscar coordenadas aleatorias dentro de los límites hasta encontrar una válida o alcanzar el límite de intentos
+        while (!validPosition && attempts < 50)
         {
-            int side = Random.Range(0, 4); 
-            float x = 0, y = 0;
+            float randomX = Random.Range(roomBounds.bounds.min.x, roomBounds.bounds.max.x);
+            float randomY = Random.Range(roomBounds.bounds.min.y, roomBounds.bounds.max.y);
+            position = new Vector2(randomX, randomY);
 
-            switch (side)
+            // Validar que la posición calculada mantenga la distancia mínima requerida respecto al jugador
+            if (playerTransform != null)
             {
-                case 0: x = Random.Range(b.min.x, b.max.x); y = b.max.y; break;
-                case 1: x = Random.Range(b.min.x, b.max.x); y = b.min.y; break;
-                case 2: x = b.min.x; y = Random.Range(b.min.y, b.max.y); break;
-                case 3: x = b.max.x; y = Random.Range(b.min.y, b.max.y); break;
+                float distance = Vector2.Distance(position, playerTransform.position);
+                if (distance >= minDistanceFromPlayer)
+                {
+                    validPosition = true;
+                }
             }
-
-            randomPos = new Vector3(x, y, 0);
-
-            if (player != null && Vector2.Distance(randomPos, player.position) > minDistanceFromPlayer)
+            else
             {
-                valid = true;
+                validPosition = true;
             }
-            safetyNet++;
+            attempts++;
         }
-        return randomPos;
+        return position;
     }
 
-    void CheckEnemiesCleared()
+    private void Update()
     {
-        // Verificar condición de victoria contando objetos activos
-        GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
-
-        if (enemies.Length == 0)
+        // Monitorear el estado de los enemigos si el combate ya inició
+        if (playerEntered && activeEnemies.Count > 0)
         {
-            roomCleared = true; 
-            OnRoomCleared();
+            // Eliminar de la lista las referencias a los objetos destruidos (enemigos muertos)
+            activeEnemies.RemoveAll(item => item == null);
+
+            // Validar si la lista está vacía para finalizar el evento de la sala
+            if (activeEnemies.Count == 0)
+            {
+                ShowUpgradeMenu();
+            }
         }
     }
 
-    void OnRoomCleared()
+    private void ShowUpgradeMenu()
     {
-        // Activar interfaz gráfica local y detener el flujo lógico
-        if (upgradePanel != null)
+        // Validar la existencia del controlador de interfaz genérico
+        if (upgradeUIController != null)
         {
-            upgradePanel.SetActive(true);
+            // Activar el panel visualmente
+            upgradeUIController.gameObject.SetActive(true);
+            // Pausar el flujo del tiempo del juego
             Time.timeScale = 0f;
+
+            // Enviar la orden de reanudación al mensajero de forma segura y sin alterar los botones
+            upgradeUIController.SetupMenu(ResumeGameAndOpenDoor);
         }
     }
 
-    public void ResetRoom()
+    public void ResumeGameAndOpenDoor()
     {
-        // Desactivar interfaz gráfica, reanudar tiempo e instanciar nuevos retos
-        if (upgradePanel != null)
+        // Ocultar la interfaz visual de mejoras
+        if (upgradeUIController != null)
         {
-            upgradePanel.SetActive(false);
+            upgradeUIController.gameObject.SetActive(false);
         }
         
-        Time.timeScale = 1f; 
-        roomCleared = false;
-        SpawnWave();
-    }
+        // Reanudar el flujo del tiempo a su estado normal
+        Time.timeScale = 1f;
 
-    // --- Eventos de Botones de la Interfaz ---
-
-    public void OnUpgradeHealthClicked()
-    {
-        // Delegar aumento al Singleton y reiniciar sala
-        StatManager.Instance.IncreaseMaxHealth();
-        ResetRoom();
-    }
-
-    public void OnUpgradeSpeedClicked()
-    {
-        // Delegar aumento al Singleton y reiniciar sala
-        StatManager.Instance.IncreaseSpeed();
-        ResetRoom();
-    }
-
-    public void OnUpgradeDamageClicked()
-    {
-        // Delegar aumento al Singleton y reiniciar sala
-        StatManager.Instance.IncreaseDamage();
-        ResetRoom();
+        // Ejecutar la orden de apertura en la puerta asignada a esta sala local
+        if (exitDoor != null)
+        {
+            exitDoor.OpenDoor();
+        }
     }
 }

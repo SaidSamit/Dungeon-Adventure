@@ -119,7 +119,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 5
   m_MaskInteraction: 0
-  m_Sprite: {fileID: -1267550136445687439, guid: 9f7b7eaa23a19e34eae957eea7d53ee4, type: 3}
+  m_Sprite: {fileID: -2118934485221375583, guid: 79329fa8796211c439cba308900170e8, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -205,7 +205,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 823423d17df9a8f4da82258c13be5fc2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
-  speed: 2
   facingDirection: 1
   rb: {fileID: 4212827277663589520}
   anim: {fileID: 4872599635936404074}
@@ -245,7 +244,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHealth
   currentHealth: 3
-  maxHealth: 3
   healthText: {fileID: 0}
 --- !u!114 &1094528050260055112
 MonoBehaviour:
@@ -264,6 +262,5 @@ MonoBehaviour:
   enemyLayer:
     serializedVersion: 2
     m_Bits: 8
-  damage: 1
   anim: {fileID: 4872599635936404074}
   cooldown: 0
