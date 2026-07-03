@@ -5,12 +5,15 @@ public class DungeonManager : MonoBehaviour
 {
     public static DungeonManager Instance;
 
-    // Almacenar dinámicamente los puntos de aparición de todas las salas activas
     public List<Transform> allRoomSpawnPoints = new List<Transform>();
+    
+    [Header("Configuración de Jefe")]
+    public Transform bossRoomSpawnPoint; // Nodo exclusivo para el jefe
+    public int roomsCleared = 0; // Contador de saltos
+    public int roomsBeforeBoss = 5; // Regla de enrutamiento (cada 5 salas)
 
     private void Awake()
     {
-        // Configurar el patrón Singleton para asegurar un único gestor de mazmorra
         if (Instance == null)
         {
             Instance = this;
@@ -21,27 +24,37 @@ public class DungeonManager : MonoBehaviour
         }
     }
 
-    public void RegisterSpawnPoint(Transform spawnPoint)
+    // Actualizamos el registro para separar el nodo del jefe de los nodos normales
+    public void RegisterSpawnPoint(Transform spawnPoint, bool isBoss)
     {
-        // Añadir el punto de aparición a la lista global si no se encuentra registrado previamente
-        if (!allRoomSpawnPoints.Contains(spawnPoint))
+        if (isBoss)
+        {
+            bossRoomSpawnPoint = spawnPoint;
+        }
+        else if (!allRoomSpawnPoints.Contains(spawnPoint))
         {
             allRoomSpawnPoints.Add(spawnPoint);
         }
     }
 
-    public Transform GetRandomSpawnPoint(Transform currentRoomSpawn)
+    // Nueva lógica de enrutamiento
+    public Transform GetNextSpawnPoint(Transform currentRoomSpawn)
     {
-        // Retornar el punto actual si no existen más salas registradas en la partida
+        // 1. Contabilizamos la sala que acabamos de limpiar
+        roomsCleared++;
+
+        // 2. Evaluamos la regla: Si es múltiplo de 5 (5, 10, 15...) y existe la sala
+        if (roomsCleared % roomsBeforeBoss == 0 && bossRoomSpawnPoint != null)
+        {
+            return bossRoomSpawnPoint;
+        }
+
+        // 3. Tráfico normal: Retornar sala aleatoria
         if (allRoomSpawnPoints.Count <= 1) return currentRoomSpawn;
 
-        // Clonar la lista para realizar un filtrado seguro sin alterar la original
         List<Transform> validTargets = new List<Transform>(allRoomSpawnPoints);
-        
-        // Remover el punto de la sala actual para evitar teletransportar al jugador al mismo lugar
         validTargets.Remove(currentRoomSpawn);
 
-        // Seleccionar un índice aleatorio de la lista de destinos válidos
         int randomIndex = Random.Range(0, validTargets.Count);
         return validTargets[randomIndex];
     }

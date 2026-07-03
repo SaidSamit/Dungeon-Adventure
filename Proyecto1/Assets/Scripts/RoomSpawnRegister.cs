@@ -2,12 +2,16 @@ using UnityEngine;
 
 public class RoomSpawnRegister : MonoBehaviour
 {
+    [Header("Configuración de Sala")]
+    // Casilla para marcar ÚNICAMENTE en tu sala especial del jefe
+    public bool isBossRoom = false; 
+
     private void Start()
     {
-        // Comunicar la existencia de este punto de aparición al gestor central al iniciar la escena
         if (DungeonManager.Instance != null)
         {
-            DungeonManager.Instance.RegisterSpawnPoint(transform);
+            // Enviamos nuestra identidad (normal o jefe) al gestor
+            DungeonManager.Instance.RegisterSpawnPoint(transform, isBossRoom);
         }
     }
 }
