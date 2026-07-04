@@ -39,4 +39,12 @@ public class AudioManager : MonoBehaviour
         // Detener la reproducción de la música actual
         bgmSource.Stop();
     }
+
+    public void SetVolume(float volume)
+    {
+        if (bgmSource != null)
+        {
+            bgmSource.volume = volume;
+        }
+    }
 }

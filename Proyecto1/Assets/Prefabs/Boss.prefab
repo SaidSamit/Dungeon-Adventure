@@ -17,7 +17,7 @@ GameObject:
   - component: {fileID: 3061022580418865099}
   - component: {fileID: 7784454461184369879}
   - component: {fileID: 5503417723707382202}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Boss
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -262,7 +262,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 980945695626554345}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: HitboxCentral
   m_TagString: Untagged
   m_Icon: {fileID: 0}
