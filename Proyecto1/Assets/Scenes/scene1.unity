@@ -18235,9 +18235,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f0275a405f7112e41812208fbf9555b8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StatManager
-  maxHealth: 3
+  maxHealth: 1000
   moveSpeed: 4
-  attackDamage: 2
+  attackDamage: 5
 --- !u!4 &1796758037
 Transform:
   m_ObjectHideFlags: 0
